@@ -6,8 +6,9 @@ import java.io.Writer
 import scala.util.matching.Regex
 
 class UserAgent(
-    val context: Context = Context.newWithIdentity("Chafe/1.0"),
-    val logger: Logger = NullLogger) {
+    var context: Context = Context.newWithIdentity("Chafe/1.0"),
+    val logger: Logger = NullLogger,
+    var persistContext: Boolean = false) {
   implicit val theLogger = logger
   
   private def extractCookies(url: URL, headers: List[Header]) = headers.filter(_.name == "Set-Cookie").flatMap { header =>
@@ -54,6 +55,8 @@ class UserAgent(
       
       // This is our context to use next time
       val newContext = Context(newReq, newCookies)
+      // If persisting context then keep a reference of it with the UserAgent instance
+      if (persistContext) context = newContext
       
       if (responseCode >= 200 && responseCode < 299) {
         // OK. Parse it 
@@ -91,7 +94,7 @@ class UserAgent(
   def POST(uri: URI, inputs: Map[String, Option[String]], headers: Header*) = invoke(Request(Post, uri.toURL(context.request.resource), headers.toList, FormURLEncoded(inputs)))
 }
 
-object UserAgent extends UserAgent(Context.newWithIdentity("Chafe/1.0"), NullLogger) {
+object UserAgent extends UserAgent(Context.newWithIdentity("Chafe/1.0"), NullLogger, false) {
   def apply(identity: String) = new UserAgent(Context.newWithIdentity(identity))
   
   def chrome = UserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/14.0.835.202 Safari/535.1")
